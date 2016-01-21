@@ -35,6 +35,7 @@
   rabbitmq_plugin: >
     names=rabbitmq_management,rabbitmq_tracing,rabbitmq_federation
     state=enabled
+  register: enable_rabbitmq_plugins_result
 
   # MUST RESTART SERVER AFTER ENABLING PLUGINS
 - name: 'Restart rabbitmq'
@@ -43,6 +44,7 @@
   service: >
     name=rabbitmq-server
     state=restarted
+  when: enable_rabbitmq_plugins_result.changed
   
 - name: 'Add administrators'
   tags: 'rabbitmq'
