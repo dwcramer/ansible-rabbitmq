@@ -10,6 +10,11 @@ Tested on Ubuntu 12.04 Server.
 
     rabbitmq_user: 'admin'         # The administrator username
     rabbitmq_password: 'changeme'  # The administrator's password (should be changed)
+    rabbitmq_nodename: # Usually omitted. By default this is rabbit@$HOSTNAME.
+                       # It is sometimes necessary to set this if the host name
+                       # might change. Note that if you change the NODENAME
+                       # on an existing installation, existing rabbitmq database
+                       # is lost/unavailable.
 
 ## Example Playbook
 
