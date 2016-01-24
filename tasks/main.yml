@@ -22,9 +22,14 @@
     repo='deb http://www.rabbitmq.com/debian/ testing main'
     state=present
 
-- name: Check if rabbitmq service exists
-  stat: path=/etc/init.d/rabbitmq-server
-  register: rabbitmq_service
+- name: 'Install rabbitmq'
+  tags: 'rabbitmq'
+  sudo: 'yes'
+  apt: >
+    pkg=rabbitmq-server state=installed
+    force=yes
+  environment:
+    RUNLEVEL: "1"
 
 - name: Check whether /etc/rabbitmq/rabbitmq-env.conf contains "NODENAME={{rabbitmq_nodename}}"
   command: awk /^NODENAME={{rabbitmq_nodename}}$/ /etc/rabbitmq/rabbitmq-env.conf
@@ -39,7 +44,7 @@
   service: >
     name=rabbitmq-server
     state=stopped
-  when: rabbitmq_nodename is defined and rabbitmq_service.exists and not check_rabbitmq_conf.stdout |  match("NODENAME={{rabbitmq_nodename|default(None)}}")
+  when: rabbitmq_nodename is defined and not check_rabbitmq_conf.stdout |  match("NODENAME={{rabbitmq_nodename|default(None)}}")
 
 - name: 'Set rabbitmq node name if provided'
   lineinfile: >
@@ -52,14 +57,7 @@
   service: >
     name=rabbitmq-server
     state=started
-  when: rabbitmq_nodename is defined and rabbitmq_service.exists and not check_rabbitmq_conf.stdout |  match("NODENAME={{rabbitmq_nodename|default(None)}}")
-
-- name: 'Install rabbitmq'
-  tags: 'rabbitmq'
-  sudo: 'yes'
-  apt: >
-    pkg=rabbitmq-server state=installed
-    force=yes
+  when: rabbitmq_nodename is defined and not check_rabbitmq_conf.stdout |  match("NODENAME={{rabbitmq_nodename|default(None)}}")
 
 - name: 'Enable rabbitmq plugins'
   tags: 'rabbitmq'
