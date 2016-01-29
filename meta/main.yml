@@ -1,14 +1,13 @@
 ---
 galaxy_info:
-  author: 'Stan Kowalczyk'
-  description: 'Installs rabbitmq server, adds admin user and removes guest user'
-  company: 'SSIL'
+  author: 'David Cramer'
+  description: 'Installs rabbitmq server, adds admin user, and removes guest user. Optionally sets NODENAME.'
   license: 'BSD'
   min_ansible_version: 1.7
   platforms:
   - name: 'Ubuntu'
     versions:
-      - 'precise'
+      - 'trusty'
   categories:
     - 'database:nosql'
     - 'networking'

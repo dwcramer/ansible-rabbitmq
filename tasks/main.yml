@@ -5,7 +5,7 @@
     - 'apt'
   sudo: 'yes'
   apt: update_cache=yes
-  
+
 - name: 'Ensure python-software-properties is installed'
   tags:
     - 'rabbitmq'
@@ -28,6 +28,36 @@
   apt: >
     pkg=rabbitmq-server state=installed
     force=yes
+  environment:
+    RUNLEVEL: "1"
+
+- name: Check whether /etc/rabbitmq/rabbitmq-env.conf contains "NODENAME={{rabbitmq_nodename}}"
+  command: awk /^NODENAME={{rabbitmq_nodename}}$/ /etc/rabbitmq/rabbitmq-env.conf
+  register: check_rabbitmq_conf
+  changed_when: False
+  failed_when: False
+  when: rabbitmq_nodename is defined
+
+- name: 'Stop rabbitmq'
+  tags: 'rabbitmq'
+  sudo: 'yes'
+  service: >
+    name=rabbitmq-server
+    state=stopped
+  when: rabbitmq_nodename is defined and not check_rabbitmq_conf.stdout |  match("NODENAME={{rabbitmq_nodename|default(None)}}")
+
+- name: 'Set rabbitmq node name if provided'
+  lineinfile: >
+    dest=/etc/rabbitmq/rabbitmq-env.conf owner=root group=root mode=0644 line="NODENAME={{rabbitmq_nodename}}" create=yes
+  when: rabbitmq_nodename is defined and not check_rabbitmq_conf.stdout |  match("NODENAME={{rabbitmq_nodename|default(None)}}")
+
+- name: 'Start rabbitmq'
+  tags: 'rabbitmq'
+  sudo: 'yes'
+  service: >
+    name=rabbitmq-server
+    state=started
+  when: rabbitmq_nodename is defined and not check_rabbitmq_conf.stdout |  match("NODENAME={{rabbitmq_nodename|default(None)}}")
 
 - name: 'Enable rabbitmq plugins'
   tags: 'rabbitmq'
@@ -35,6 +65,7 @@
   rabbitmq_plugin: >
     names=rabbitmq_management,rabbitmq_tracing,rabbitmq_federation
     state=enabled
+  register: enable_rabbitmq_plugins_result
 
   # MUST RESTART SERVER AFTER ENABLING PLUGINS
 - name: 'Restart rabbitmq'
@@ -43,7 +74,8 @@
   service: >
     name=rabbitmq-server
     state=restarted
-  
+  when: enable_rabbitmq_plugins_result.changed
+
 - name: 'Add administrators'
   tags: 'rabbitmq'
   sudo: 'yes'
@@ -51,13 +83,14 @@
     user={{ item }}
     password={{rabbitmq_password}}
     tags=administrator,{{ item }}
+    node={{rabbitmq_nodename|default(omit)}}
     vhost=/
     configure_priv=.*
     write_priv=.*
     read_priv=.*
     state=present
   with_items:
-  - "{{ rabbitmq_user }}"
+    - "{{ rabbitmq_user }}"
 
 - name: 'Remove default guest user'
   tags: 'rabbitmq'
@@ -65,3 +98,4 @@
   rabbitmq_user: >
     user=guest
     state=absent
+    node={{rabbitmq_nodename|default(omit)}}
